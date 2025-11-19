@@ -149,11 +149,16 @@ def step_introduction():
 
     console.print("[bold white]Welcome to the Virtual MCP Server Composition Demo![/bold white]\n")
 
-    console.print("[cyan]What is Virtual MCP Composition?[/cyan]")
-    console.print("[white]" + "─" * 32 + "[/white]\n")
+    console.print("[cyan]What is Virtual MCP (vMCP)?[/cyan]")
+    console.print("[white]" + "─" * 26 + "[/white]\n")
 
-    console.print("Virtual MCP Server [bold]orchestrates multi-step workflows[/bold] across multiple")
-    console.print("backend MCP servers, enabling complex operations in a single tool call.\n")
+    console.print("An [bold]aggregation proxy[/bold] that unifies multiple MCP servers into a single interface,")
+    console.print("solving tool fragmentation and authentication complexity.\n")
+
+    console.print("[cyan]What is Composition?[/cyan]")
+    console.print("[white]" + "─" * 20 + "[/white]\n")
+
+    console.print("[bold]Multi-step workflows[/bold] spanning multiple backends—complex operations in one call.\n")
 
     features = Table(show_header=False, box=None, padding=(0, 2))
     features.add_column(style="green bold")
@@ -639,10 +644,18 @@ def step_summary():
     console.print("  • [bold]Structured outputs[/bold] - Consistent, parseable results")
     console.print("  • [bold]Cross-backend workflows[/bold] - Orchestrate multiple systems\n")
 
-    console.print("[magenta bold]Try It Yourself:[/magenta bold]\n")
-    console.print(f"  1. Connect your MCP client to [bold]{VMCP_ENDPOINT}[/bold]")
-    console.print("  2. Call composite tools: [cyan]aggregate_docs[/cyan], [cyan]analyze_repository[/cyan], [cyan]investigate_image[/cyan]")
-    console.print("  3. Watch Virtual MCP orchestrate multi-step workflows\n")
+    console.print("[cyan bold]What's Next:[/cyan bold]\n")
+
+    next_steps = Table(show_header=False, box=None, padding=(0, 2))
+    next_steps.add_column(style="yellow bold")
+    next_steps.add_column()
+
+    next_steps.add_row("→", "[bold]Output Aggregation v2[/bold] - Structured output schemas for multi-step workflows (#176)")
+    next_steps.add_row("→", "[bold]Health Monitoring[/bold] - Circuit breakers and graceful backend failure handling (#166)")
+    next_steps.add_row("→", "[bold]Official Release[/bold] - Production-ready vMCP with comprehensive documentation")
+
+    console.print(next_steps)
+    console.print()
 
     console.print("[white bold]Thank you for watching![/white bold] 🎉\n")
 
