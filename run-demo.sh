@@ -16,10 +16,10 @@ if [ ! -d ".venv" ]; then
     exit 1
 fi
 
-# Check if vmcp binary exists
-if [ ! -f "../../bin/vmcp" ]; then
-    echo "Error: vmcp binary not found"
-    echo "Please run: task build-vmcp"
+# Check if vmcp binary exists in PATH or GOPATH
+if ! command -v vmcp &> /dev/null; then
+    echo "Error: vmcp binary not found in PATH or GOPATH"
+    echo "Please ensure vmcp is installed and in your PATH, or run: task build-vmcp"
     exit 1
 fi
 
