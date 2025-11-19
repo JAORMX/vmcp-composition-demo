@@ -1,0 +1,223 @@
+# Virtual MCP Server Configuration - Composition Demo
+# This configuration showcases composite tools that orchestrate
+# multi-step workflows across multiple backend MCP servers.
+
+name: "composition-demo"
+group: "default"  # References ToolHive group with backend servers
+
+# Server settings
+port: 4483
+log_level: "info"
+
+# Authentication: Anonymous for demo purposes
+incoming_auth:
+  type: anonymous
+
+# Outgoing authentication (Virtual MCP → Backends)
+outgoing_auth:
+  source: inline
+  default:
+    type: unauthenticated
+
+# Aggregation settings
+aggregation:
+  conflict_resolution: prefix
+  conflict_resolution_config:
+    prefix_format: "{workload}_"
+
+# ============================================================================
+# COMPOSITE TOOLS
+# ============================================================================
+# These multi-step workflows demonstrate Virtual MCP's orchestration
+# capabilities, including parallel execution, output aggregation, and
+# cross-backend coordination.
+
+composite_tools:
+  # ==========================================================================
+  # Use Case 1: Multi-Source Documentation Aggregator
+  # ==========================================================================
+  # Demonstrates: Parallel execution, output_format aggregation, timing
+  #
+  # This tool fetches documentation from multiple sources simultaneously
+  # and aggregates them into a structured report with metadata.
+  - name: "aggregate_docs"
+    description: "Fetch and aggregate documentation from multiple sources in parallel"
+
+    parameters:
+      sources:
+        type: "array"
+        description: "List of documentation URLs to fetch"
+        default:
+          - "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/README.md"
+          - "https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md"
+          - "https://raw.githubusercontent.com/modelcontextprotocol/servers/main/README.md"
+
+    timeout: "2m"
+
+    steps:
+      # These three steps run in PARALLEL (no dependencies)
+      - id: "fetch_source_1"
+        type: "tool"
+        tool: "fetch_fetch"
+        arguments:
+          url: "{{index .params.sources 0}}"
+          max_length: 5000
+
+      - id: "fetch_source_2"
+        type: "tool"
+        tool: "fetch_fetch"
+        arguments:
+          url: "{{index .params.sources 1}}"
+          max_length: 5000
+
+      - id: "fetch_source_3"
+        type: "tool"
+        tool: "fetch_fetch"
+        arguments:
+          url: "{{index .params.sources 2}}"
+          max_length: 5000
+
+    # Custom output format aggregates all fetched content
+    output_format: |
+      {
+        "summary": {
+          "total_sources": 3,
+          "workflow_id": "{{.workflow.id}}",
+          "duration_ms": {{.workflow.duration_ms}},
+          "step_count": {{.workflow.step_count}}
+        },
+        "sources": [
+          {
+            "url": "{{index .params.sources 0}}",
+            "status": "{{.steps.fetch_source_1.status}}",
+            "content_preview": {{quote (slice (index .steps.fetch_source_1.output "text") 0 100)}}
+          },
+          {
+            "url": "{{index .params.sources 1}}",
+            "status": "{{.steps.fetch_source_2.status}}",
+            "content_preview": {{quote (slice (index .steps.fetch_source_2.output "text") 0 100)}}
+          },
+          {
+            "url": "{{index .params.sources 2}}",
+            "status": "{{.steps.fetch_source_3.status}}",
+            "content_preview": {{quote (slice (index .steps.fetch_source_3.output "text") 0 100)}}
+          }
+        ]
+      }
+
+  # ==========================================================================
+  # Use Case 2: GitHub Repository Health Check
+  # ==========================================================================
+  # Demonstrates: Sequential execution with dependencies, parameter defaults
+  #
+  # This tool analyzes a GitHub repository by fetching metadata and issue
+  # statistics, with each step depending on the previous one's output.
+  - name: "analyze_repository"
+    description: "Analyze a GitHub repository's health and activity"
+
+    parameters:
+      owner:
+        type: "string"
+        description: "Repository owner"
+        default: "modelcontextprotocol"
+      repo:
+        type: "string"
+        description: "Repository name"
+        default: "specification"
+
+    timeout: "2m"
+
+    steps:
+      # Step 1: List issues
+      - id: "list_issues"
+        type: "tool"
+        tool: "github_list_issues"
+        arguments:
+          owner: "{{.params.owner}}"
+          repo: "{{.params.repo}}"
+          perPage: 5
+
+      # Step 2: List commits (runs in parallel with issues)
+      - id: "list_commits"
+        type: "tool"
+        tool: "github_list_commits"
+        arguments:
+          owner: "{{.params.owner}}"
+          repo: "{{.params.repo}}"
+          perPage: 3
+
+    # Structured activity report
+    output_format: |
+      {
+        "repository": "{{.params.owner}}/{{.params.repo}}",
+        "activity": {
+          "issues_status": "{{.steps.list_issues.status}}",
+          "issues_preview": {{quote (slice (index .steps.list_issues.output "text") 0 200)}},
+          "commits_status": "{{.steps.list_commits.status}}",
+          "commits_preview": {{quote (slice (index .steps.list_commits.output "text") 0 200)}}
+        },
+        "metadata": {
+          "workflow_id": "{{.workflow.id}}",
+          "duration_ms": {{.workflow.duration_ms}},
+          "steps_executed": {{.workflow.step_count}}
+        }
+      }
+
+  # ==========================================================================
+  # Use Case 3: Container Image Investigation
+  # ==========================================================================
+  # Demonstrates: OCI registry integration, nested data, real-world debugging
+  #
+  # This tool provides comprehensive analysis of a container image by
+  # querying the OCI registry for metadata, manifest, and configuration.
+  - name: "investigate_image"
+    description: "Investigate a container image from an OCI registry"
+
+    parameters:
+      image:
+        type: "string"
+        description: "Image reference (e.g., docker.io/library/alpine:latest)"
+        default: "docker.io/library/alpine:latest"
+
+    timeout: "2m"
+
+    steps:
+      # Step 1: Get image information
+      - id: "get_image_info"
+        type: "tool"
+        tool: "oci-registry_get_image_info"
+        arguments:
+          image_ref: "{{.params.image}}"
+
+      # Step 2: Get manifest (runs in parallel with config)
+      - id: "get_manifest"
+        type: "tool"
+        tool: "oci-registry_get_image_manifest"
+        arguments:
+          image_ref: "{{.params.image}}"
+        depends_on: ["get_image_info"]
+
+      # Step 3: Get config (runs in parallel with manifest)
+      - id: "get_config"
+        type: "tool"
+        tool: "oci-registry_get_image_config"
+        arguments:
+          image_ref: "{{.params.image}}"
+        depends_on: ["get_image_info"]
+
+    # Comprehensive image report
+    output_format: |
+      {
+        "image": "{{.params.image}}",
+        "analysis": {
+          "image_info": {{quote (slice (index .steps.get_image_info.output "text") 0 150)}},
+          "manifest_preview": {{quote (slice (index .steps.get_manifest.output "text") 0 150)}},
+          "config_preview": {{quote (slice (index .steps.get_config.output "text") 0 150)}}
+        },
+        "workflow": {
+          "id": "{{.workflow.id}}",
+          "duration_ms": {{.workflow.duration_ms}},
+          "steps_executed": {{.workflow.step_count}},
+          "all_steps_completed": true
+        }
+      }
