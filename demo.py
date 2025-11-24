@@ -166,6 +166,7 @@ def step_introduction():
 
     features.add_row("✓", "[bold]Parallel Execution[/bold] - Independent steps run simultaneously")
     features.add_row("✓", "[bold]Sequential Dependencies[/bold] - Steps can depend on previous results")
+    features.add_row("✓", "[bold]Conditional Execution[/bold] - Steps can execute based on conditions")
     features.add_row("✓", "[bold]Output Aggregation[/bold] - Custom templates format results")
     features.add_row("✓", "[bold]Parameter Defaults[/bold] - JSON Schema defaults automatically applied")
     features.add_row("✓", "[bold]Workflow Metadata[/bold] - Timing and execution details included")
@@ -368,7 +369,7 @@ async def step_start_server():
     console.print("[magenta]★ Server endpoints:[/magenta]")
     console.print(f"  • MCP Endpoint: [bold]{VMCP_ENDPOINT}[/bold]")
     console.print(f"  • Health Check: [bold]{HEALTH_ENDPOINT}[/bold]")
-    console.print(f"  • MCP Client: [bold]Connected via SSE transport[/bold]")
+    console.print(f"  • MCP Client: [bold]Connected via Streaming HTTP transport[/bold]")
 
     wait_for_user()
 
