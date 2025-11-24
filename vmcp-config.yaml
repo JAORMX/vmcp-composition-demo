@@ -77,33 +77,50 @@ composite_tools:
           url: "{{index .params.sources 2}}"
           max_length: 5000
 
-    # Custom output format aggregates all fetched content
-    output_format: |
-      {
-        "summary": {
-          "total_sources": 3,
-          "workflow_id": "{{.workflow.id}}",
-          "duration_ms": {{.workflow.duration_ms}},
-          "step_count": {{.workflow.step_count}}
-        },
-        "sources": [
-          {
-            "url": "{{index .params.sources 0}}",
-            "status": "{{.steps.fetch_source_1.status}}",
-            "content_preview": {{quote (slice (index .steps.fetch_source_1.output "text") 0 100)}}
-          },
-          {
-            "url": "{{index .params.sources 1}}",
-            "status": "{{.steps.fetch_source_2.status}}",
-            "content_preview": {{quote (slice (index .steps.fetch_source_2.output "text") 0 100)}}
-          },
-          {
-            "url": "{{index .params.sources 2}}",
-            "status": "{{.steps.fetch_source_3.status}}",
-            "content_preview": {{quote (slice (index .steps.fetch_source_3.output "text") 0 100)}}
-          }
-        ]
-      }
+    # Structured output schema with type-safe properties
+    output:
+      properties:
+        summary:
+          type: object
+          description: "Workflow execution summary"
+          properties:
+            total_sources:
+              type: integer
+              description: "Total number of sources fetched"
+              value: "3"
+            workflow_id:
+              type: string
+              description: "Unique workflow identifier"
+              value: "{{.workflow.id}}"
+            duration_ms:
+              type: integer
+              description: "Workflow duration in milliseconds"
+              value: "{{.workflow.duration_ms}}"
+            step_count:
+              type: integer
+              description: "Number of steps executed"
+              value: "{{.workflow.step_count}}"
+        sources:
+          type: array
+          description: "Fetched source details"
+          value: |
+            [
+              {
+                "url": "{{index .params.sources 0}}",
+                "status": "{{.steps.fetch_source_1.status}}",
+                "content_preview": "{{slice (index .steps.fetch_source_1.output \"text\") 0 100}}"
+              },
+              {
+                "url": "{{index .params.sources 1}}",
+                "status": "{{.steps.fetch_source_2.status}}",
+                "content_preview": "{{slice (index .steps.fetch_source_2.output \"text\") 0 100}}"
+              },
+              {
+                "url": "{{index .params.sources 2}}",
+                "status": "{{.steps.fetch_source_3.status}}",
+                "content_preview": "{{slice (index .steps.fetch_source_3.output \"text\") 0 100}}"
+              }
+            ]
 
   # ==========================================================================
   # Use Case 2: GitHub Repository Health Check
@@ -146,22 +163,49 @@ composite_tools:
           repo: "{{.params.repo}}"
           perPage: 3
 
-    # Structured activity report
-    output_format: |
-      {
-        "repository": "{{.params.owner}}/{{.params.repo}}",
-        "activity": {
-          "issues_status": "{{.steps.list_issues.status}}",
-          "issues_preview": {{quote (slice (index .steps.list_issues.output "text") 0 200)}},
-          "commits_status": "{{.steps.list_commits.status}}",
-          "commits_preview": {{quote (slice (index .steps.list_commits.output "text") 0 200)}}
-        },
-        "metadata": {
-          "workflow_id": "{{.workflow.id}}",
-          "duration_ms": {{.workflow.duration_ms}},
-          "steps_executed": {{.workflow.step_count}}
-        }
-      }
+    # Structured output schema for repository analysis
+    output:
+      properties:
+        repository:
+          type: string
+          description: "Repository identifier"
+          value: "{{.params.owner}}/{{.params.repo}}"
+        activity:
+          type: object
+          description: "Repository activity information"
+          properties:
+            issues_status:
+              type: string
+              description: "Status of issues fetch operation"
+              value: "{{.steps.list_issues.status}}"
+            issues_preview:
+              type: string
+              description: "Preview of recent issues"
+              value: "{{slice (index .steps.list_issues.output \"text\") 0 200}}"
+            commits_status:
+              type: string
+              description: "Status of commits fetch operation"
+              value: "{{.steps.list_commits.status}}"
+            commits_preview:
+              type: string
+              description: "Preview of recent commits"
+              value: "{{slice (index .steps.list_commits.output \"text\") 0 200}}"
+        metadata:
+          type: object
+          description: "Workflow execution metadata"
+          properties:
+            workflow_id:
+              type: string
+              description: "Unique workflow identifier"
+              value: "{{.workflow.id}}"
+            duration_ms:
+              type: integer
+              description: "Workflow duration in milliseconds"
+              value: "{{.workflow.duration_ms}}"
+            steps_executed:
+              type: integer
+              description: "Number of steps executed"
+              value: "{{.workflow.step_count}}"
 
   # ==========================================================================
   # Use Case 3: Container Image Investigation
@@ -205,19 +249,47 @@ composite_tools:
           image_ref: "{{.params.image}}"
         depends_on: ["get_image_info"]
 
-    # Comprehensive image report
-    output_format: |
-      {
-        "image": "{{.params.image}}",
-        "analysis": {
-          "image_info": {{quote (slice (index .steps.get_image_info.output "text") 0 150)}},
-          "manifest_preview": {{quote (slice (index .steps.get_manifest.output "text") 0 150)}},
-          "config_preview": {{quote (slice (index .steps.get_config.output "text") 0 150)}}
-        },
-        "workflow": {
-          "id": "{{.workflow.id}}",
-          "duration_ms": {{.workflow.duration_ms}},
-          "steps_executed": {{.workflow.step_count}},
-          "all_steps_completed": true
-        }
-      }
+    # Structured output schema for image investigation
+    output:
+      properties:
+        image:
+          type: string
+          description: "Container image reference"
+          value: "{{.params.image}}"
+        analysis:
+          type: object
+          description: "Image analysis results"
+          properties:
+            image_info:
+              type: string
+              description: "Basic image information"
+              value: "{{slice (index .steps.get_image_info.output \"text\") 0 150}}"
+            manifest_preview:
+              type: string
+              description: "Preview of image manifest"
+              value: "{{slice (index .steps.get_manifest.output \"text\") 0 150}}"
+            config_preview:
+              type: string
+              description: "Preview of image configuration"
+              value: "{{slice (index .steps.get_config.output \"text\") 0 150}}"
+        workflow:
+          type: object
+          description: "Workflow execution details"
+          properties:
+            id:
+              type: string
+              description: "Unique workflow identifier"
+              value: "{{.workflow.id}}"
+            duration_ms:
+              type: integer
+              description: "Workflow duration in milliseconds"
+              value: "{{.workflow.duration_ms}}"
+            steps_executed:
+              type: integer
+              description: "Number of steps executed"
+              value: "{{.workflow.step_count}}"
+            all_steps_completed:
+              type: boolean
+              description: "Whether all steps completed successfully"
+              value: "true"
+              default: true

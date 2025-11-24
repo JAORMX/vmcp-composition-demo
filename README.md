@@ -24,7 +24,8 @@ This demo showcases the **Virtual MCP Server's composite tool capabilities** - t
 ## Key Features Demonstrated
 
 - ✅ **Composite Tools**: Multi-step workflows orchestrated by Virtual MCP
-- ✅ **Output Aggregation**: Custom `output_format` templates for structured results
+- ✅ **Structured Output Schemas**: Type-safe outputs with JSON Schema definitions
+- ✅ **Output Aggregation**: Template-based value construction from workflow steps
 - ✅ **Parallel Execution**: Independent steps run concurrently for performance
 - ✅ **Sequential Dependencies**: Steps that depend on previous results
 - ✅ **Parameter Defaults**: JSON Schema defaults automatically applied
@@ -145,8 +146,9 @@ Speeds up animations (combine with AUTO_CONTINUE for fastest execution).
 
 ### vmcp-config.yaml
 
-The configuration file defines 3 composite tools. **Note on parameter format**: Currently uses a simplified format (not standard JSON Schema) - see [issue #2650](https://github.com/stacklok/toolhive/issues/2650).
+The configuration file defines 3 composite tools with structured output schemas.
 
+**Parameter format:**
 ```yaml
 parameters:
   param_name:
@@ -155,9 +157,23 @@ parameters:
     default: "value"    # Optional default
 ```
 
+**Output schema format (new in PR #2677):**
+```yaml
+output:
+  properties:
+    property_name:
+      type: "string"      # Type: string, integer, boolean, number, object, array
+      description: "..."  # Property description
+      value: "{{.template}}"  # Go template expression
+      default: "value"    # Optional default value
+      properties: {}      # For nested objects
+  required: ["property_name"]  # Optional required fields
+```
+
+Files:
 - **vmcp-config.yaml**: Virtual MCP server configuration with composite tool definitions
-- **demo.sh**: Interactive demo script with colorful CLI output
-- **test-tools.sh**: Quick test script to verify each composite tool
+- **demo.py**: Interactive demo script with Rich library formatting
+- **start-backends.sh**: Helper script to manage backend MCP servers
 
 ## Architecture
 
