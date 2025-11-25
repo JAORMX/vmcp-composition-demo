@@ -88,39 +88,30 @@ composite_tools:
               type: integer
               description: "Total number of sources fetched"
               value: "3"
-            workflow_id:
-              type: string
-              description: "Unique workflow identifier"
-              value: "{{.workflow.id}}"
-            duration_ms:
-              type: integer
-              description: "Workflow duration in milliseconds"
-              value: "{{.workflow.duration_ms}}"
-            step_count:
-              type: integer
-              description: "Number of steps executed"
-              value: "{{.workflow.step_count}}"
-        sources:
-          type: array
-          description: "Fetched source details"
-          value: |
-            [
-              {
-                "url": "{{index .params.sources 0}}",
-                "status": "{{.steps.fetch_source_1.status}}",
-                "content_preview": "{{slice (index .steps.fetch_source_1.output \"text\") 0 100}}"
-              },
-              {
-                "url": "{{index .params.sources 1}}",
-                "status": "{{.steps.fetch_source_2.status}}",
-                "content_preview": "{{slice (index .steps.fetch_source_2.output \"text\") 0 100}}"
-              },
-              {
-                "url": "{{index .params.sources 2}}",
-                "status": "{{.steps.fetch_source_3.status}}",
-                "content_preview": "{{slice (index .steps.fetch_source_3.output \"text\") 0 100}}"
-              }
-            ]
+        source1_status:
+          type: string
+          description: "Status of first source fetch"
+          value: "{{.steps.fetch_source_1.status}}"
+        source1_preview:
+          type: string
+          description: "Preview of first source content"
+          value: "{{index .steps.fetch_source_1.output \"text\"}}"
+        source2_status:
+          type: string
+          description: "Status of second source fetch"
+          value: "{{.steps.fetch_source_2.status}}"
+        source2_preview:
+          type: string
+          description: "Preview of second source content"
+          value: "{{index .steps.fetch_source_2.output \"text\"}}"
+        source3_status:
+          type: string
+          description: "Status of third source fetch"
+          value: "{{.steps.fetch_source_3.status}}"
+        source3_preview:
+          type: string
+          description: "Preview of third source content"
+          value: "{{index .steps.fetch_source_3.output \"text\"}}"
 
   # ==========================================================================
   # Use Case 2: GitHub Repository Health Check
@@ -190,22 +181,10 @@ composite_tools:
               type: string
               description: "Preview of recent commits"
               value: "{{slice (index .steps.list_commits.output \"text\") 0 200}}"
-        metadata:
-          type: object
-          description: "Workflow execution metadata"
-          properties:
-            workflow_id:
-              type: string
-              description: "Unique workflow identifier"
-              value: "{{.workflow.id}}"
-            duration_ms:
-              type: integer
-              description: "Workflow duration in milliseconds"
-              value: "{{.workflow.duration_ms}}"
-            steps_executed:
-              type: integer
-              description: "Number of steps executed"
-              value: "{{.workflow.step_count}}"
+        issues_count:
+          type: integer
+          description: "Number of issues fetched"
+          value: "5"
 
   # ==========================================================================
   # Use Case 3: Container Image Investigation
@@ -272,24 +251,8 @@ composite_tools:
               type: string
               description: "Preview of image configuration"
               value: "{{slice (index .steps.get_config.output \"text\") 0 150}}"
-        workflow:
-          type: object
-          description: "Workflow execution details"
-          properties:
-            id:
-              type: string
-              description: "Unique workflow identifier"
-              value: "{{.workflow.id}}"
-            duration_ms:
-              type: integer
-              description: "Workflow duration in milliseconds"
-              value: "{{.workflow.duration_ms}}"
-            steps_executed:
-              type: integer
-              description: "Number of steps executed"
-              value: "{{.workflow.step_count}}"
-            all_steps_completed:
-              type: boolean
-              description: "Whether all steps completed successfully"
-              value: "true"
-              default: true
+        all_steps_completed:
+          type: boolean
+          description: "Whether all steps completed successfully"
+          value: "true"
+          default: true
