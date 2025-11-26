@@ -251,14 +251,14 @@ def step_show_config():
     console.print(syntax)
 
     console.print(Panel(
-        "[cyan]Configuration defines 3 composite tools with output_format templates[/cyan]",
+        "[cyan]Configuration defines 3 composite tools with structured output schemas[/cyan]",
         border_style="cyan"
     ))
 
     console.print("\n[magenta]★ Key configuration points:[/magenta]")
     console.print("  • [bold]group: default[/bold] - References our ToolHive group")
     console.print("  • [bold]composite_tools[/bold] - Multi-step workflow definitions")
-    console.print("  • [bold]output_format[/bold] - Custom output aggregation templates")
+    console.print("  • [bold]output[/bold] - Structured output schemas with type-safe properties")
     console.print("  • [bold]depends_on[/bold] - Step dependency declarations")
 
     wait_for_user()
@@ -407,7 +407,7 @@ def display_workflow_result(result: dict, title: str = "Workflow Result"):
     # Use types.TextContent to properly access text
     for content in result["content"]:
         if isinstance(content, types.TextContent):
-            # content.text contains the JSON string from output_format
+            # content.text contains the JSON string from structured output schema
             try:
                 parsed_result = json.loads(content.text)
             except json.JSONDecodeError:
@@ -453,7 +453,7 @@ async def step_demo_aggregate_docs():
     parallel.add("📄 fetch_source_1 → MCP README")
     parallel.add("📄 fetch_source_2 → Basic Spec")
     parallel.add("📄 fetch_source_3 → Transports Doc")
-    tree.add("📊 Aggregate with output_format")
+    tree.add("📊 Aggregate with structured output schema")
 
     console.print(tree)
     console.print()
@@ -651,8 +651,8 @@ def step_summary():
     next_steps.add_column(style="yellow bold")
     next_steps.add_column()
 
-    next_steps.add_row("→", "[bold]Output Aggregation v2[/bold] - Structured output schemas for multi-step workflows (#176)")
-    next_steps.add_row("→", "[bold]Health Monitoring[/bold] - Circuit breakers and graceful backend failure handling (#166)")
+    next_steps.add_row("→", "[bold]Conditional Execution[/bold] - Enhanced conditional step logic")
+    next_steps.add_row("→", "[bold]Health Monitoring[/bold] - Circuit breakers and graceful backend failure handling")
     next_steps.add_row("→", "[bold]Official Release[/bold] - Production-ready vMCP with comprehensive documentation")
 
     console.print(next_steps)
