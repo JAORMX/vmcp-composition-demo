@@ -651,7 +651,6 @@ def step_summary():
     next_steps.add_column(style="yellow bold")
     next_steps.add_column()
 
-    next_steps.add_row("→", "[bold]Conditional Execution[/bold] - Enhanced conditional step logic")
     next_steps.add_row("→", "[bold]Health Monitoring[/bold] - Circuit breakers and graceful backend failure handling")
     next_steps.add_row("→", "[bold]Official Release[/bold] - Production-ready vMCP with comprehensive documentation")
 
