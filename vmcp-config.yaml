@@ -44,13 +44,15 @@ composite_tools:
     description: "Fetch and aggregate documentation from multiple sources in parallel"
 
     parameters:
-      sources:
-        type: "array"
-        description: "List of documentation URLs to fetch"
-        default:
-          - "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/README.md"
-          - "https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md"
-          - "https://raw.githubusercontent.com/modelcontextprotocol/servers/main/README.md"
+      type: object
+      properties:
+        sources:
+          type: "array"
+          description: "List of documentation URLs to fetch"
+          default:
+            - "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/README.md"
+            - "https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md"
+            - "https://raw.githubusercontent.com/modelcontextprotocol/servers/main/README.md"
 
     timeout: "2m"
 
@@ -124,14 +126,16 @@ composite_tools:
     description: "Analyze a GitHub repository's health and activity"
 
     parameters:
-      owner:
-        type: "string"
-        description: "Repository owner"
-        default: "modelcontextprotocol"
-      repo:
-        type: "string"
-        description: "Repository name"
-        default: "specification"
+      type: object
+      properties:
+        owner:
+          type: "string"
+          description: "Repository owner"
+          default: "modelcontextprotocol"
+        repo:
+          type: "string"
+          description: "Repository name"
+          default: "specification"
 
     timeout: "2m"
 
@@ -197,10 +201,12 @@ composite_tools:
     description: "Investigate a container image from an OCI registry"
 
     parameters:
-      image:
-        type: "string"
-        description: "Image reference (e.g., docker.io/library/alpine:latest)"
-        default: "docker.io/library/alpine:latest"
+      type: object
+      properties:
+        image:
+          type: "string"
+          description: "Image reference (e.g., docker.io/library/alpine:latest)"
+          default: "docker.io/library/alpine:latest"
 
     timeout: "2m"
 
