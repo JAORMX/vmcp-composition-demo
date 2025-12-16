@@ -26,7 +26,18 @@ echo "→ Found Python $PYTHON_VERSION"
 
 # Create virtual environment
 if [ -d ".venv" ]; then
-    echo "→ Virtual environment already exists"
+    # Check if existing venv was created with a different Python version
+    VENV_PYTHON_VERSION=$(.venv/bin/python3 --version 2>/dev/null | cut -d' ' -f2 | cut -d'.' -f1,2 || echo "unknown")
+    if [ "$VENV_PYTHON_VERSION" != "$PYTHON_VERSION" ]; then
+        echo "→ Existing venv uses Python $VENV_PYTHON_VERSION, but system has Python $PYTHON_VERSION"
+        echo "→ Removing old virtual environment..."
+        rm -rf .venv
+        echo "→ Creating new virtual environment with Python $PYTHON_VERSION..."
+        python3 -m venv .venv
+        echo "✓ Virtual environment recreated"
+    else
+        echo "→ Virtual environment already exists (Python $VENV_PYTHON_VERSION)"
+    fi
 else
     echo "→ Creating virtual environment..."
     python3 -m venv .venv
