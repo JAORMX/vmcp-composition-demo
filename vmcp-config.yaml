@@ -205,11 +205,11 @@ composite_tools:
             commits_preview:
               type: string
               description: "Preview of recent commits"
-              value: "{{slice (index .steps.list_commits.output \"text\") 0 200}}"
+              value: "{{slice (.steps.list_commits.output.text) 0 200}}"
         issues_count:
           type: integer
           description: "Number of issues fetched"
-          value: "{{len (index (fromJson .steps.list_issues.output.text) \"issues\")}}"
+          value: "{{len (fromJson .steps.list_issues.output.text).issues}}"
 
   # ==========================================================================
   # Use Case 3: Container Image Investigation
