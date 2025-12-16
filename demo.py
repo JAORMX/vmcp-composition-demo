@@ -20,6 +20,7 @@ from typing import Optional
 
 import yaml
 from mcp import ClientSession, types
+from mcp.shared.context import RequestContext
 from mcp.client.streamable_http import streamablehttp_client
 from rich.console import Console
 from rich.json import JSON
@@ -51,6 +52,59 @@ vmcp_process: Optional[subprocess.Popen] = None
 mcp_session: Optional[ClientSession] = None
 exit_stack: Optional[AsyncExitStack] = None
 console = Console(soft_wrap=True)
+
+
+async def elicitation_callback(
+    context: RequestContext["ClientSession", any],
+    params: types.ElicitRequestParams,
+) -> types.ElicitResult | types.ErrorData:
+    """Handle elicitation requests from the server.
+    
+    This callback is invoked when the server needs user confirmation
+    during a composite tool workflow.
+    """
+    # Display the elicitation message with a nice UI
+    message = params.message if params.message else "User confirmation required"
+    
+    console.print()
+    console.print(Panel(
+        f"[yellow bold]⚠ Workflow Paused - User Input Required[/yellow bold]\n\n"
+        f"{message}\n\n"
+        f"[dim]The workflow will continue after your response.[/dim]",
+        border_style="yellow",
+        title="[yellow]Elicitation[/yellow]",
+        title_align="left"
+    ))
+    
+    # Show options
+    options_table = Table(show_header=False, box=None, padding=(0, 2))
+    options_table.add_column(style="green bold")
+    options_table.add_column()
+    options_table.add_row("[Y]", "Yes, continue with the workflow")
+    options_table.add_row("[n]", "No, skip remaining steps")
+    console.print(options_table)
+    console.print()
+    
+    # Get user response
+    if not AUTO_CONTINUE:
+        response = console.input("[cyan bold]Your choice [Y/n]: [/cyan bold]")
+        should_continue = response.lower() != 'n'
+    else:
+        should_continue = True
+        console.print("[dim]Auto-continuing (AUTO_CONTINUE=1)...[/dim]")
+    
+    if should_continue:
+        console.print("\n[green]✓ Continuing workflow...[/green]\n")
+        return types.ElicitResult(
+            action="accept",
+            content={"continue": True}
+        )
+    else:
+        console.print("\n[yellow]⏭ Skipping remaining steps...[/yellow]\n")
+        return types.ElicitResult(
+            action="decline",
+            content=None
+        )
 
 
 async def cleanup_async():
@@ -352,9 +406,13 @@ async def step_start_server():
             streamablehttp_client(VMCP_ENDPOINT)
         )
 
-        # Create client session
+        # Create client session with elicitation support
         mcp_session = await exit_stack.enter_async_context(
-            ClientSession(read_stream, write_stream)
+            ClientSession(
+                read_stream, 
+                write_stream,
+                elicitation_callback=elicitation_callback
+            )
         )
 
         # Initialize session
@@ -375,7 +433,11 @@ async def step_start_server():
 
 
 async def execute_composite_tool(tool_name: str, params: dict) -> dict:
-    """Execute a composite tool using the MCP SDK and return the result."""
+    """Execute a composite tool using the MCP SDK and return the result.
+    
+    Elicitation requests are handled automatically by the elicitation_callback
+    registered with the ClientSession.
+    """
     global mcp_session
 
     if not mcp_session:
@@ -383,6 +445,7 @@ async def execute_composite_tool(tool_name: str, params: dict) -> dict:
 
     try:
         # Use the MCP SDK's call_tool method
+        # Elicitation is handled via the callback registered with ClientSession
         result = await mcp_session.call_tool(tool_name, params)
 
         # Return the CallToolResult object
@@ -503,18 +566,19 @@ async def step_demo_analyze_repo():
 
     # Show workflow diagram
     tree = Tree("🎯 [bold]analyze_repository[/bold]")
-    step1 = tree.add("1️⃣ get_repo_info → Fetch repository metadata")
-    step2 = step1.add("[dim](depends on step 1)[/dim]")
-    step2.add("2️⃣ list_issues → Get recent issues")
-    step2.add("3️⃣ list_commits → Get latest commits")
+    tree.add("1️⃣ list_issues → Get recent issues")
+    elicit = tree.add("[yellow]2️⃣ confirm_continue → Elicitation (if > 3 issues)[/yellow]")
+    elicit.add("[dim]Asks user for confirmation before continuing[/dim]")
+    tree.add("3️⃣ list_commits → Get latest commits")
     tree.add("📊 Generate health report")
 
     console.print(tree)
     console.print()
 
     console.print("[magenta]★ This demonstrates:[/magenta]")
-    console.print("  • [bold]Sequential dependencies[/bold] - Steps wait for previous completion")
-    console.print("  • [bold]Parameter defaults[/bold] - Uses default repo if not specified")
+    console.print("  • [bold]Conditional elicitation[/bold] - Ask user input when condition is met")
+    console.print("  • [bold]Skippable steps[/bold] - Elicitation skipped if <= 3 issues")
+    console.print("  • [bold]Sequential dependencies[/bold] - Commits wait for elicitation")
     console.print("  • [bold]GitHub MCP integration[/bold] - Multi-step API orchestration\n")
 
     wait_for_user()
@@ -522,25 +586,19 @@ async def step_demo_analyze_repo():
     console.print("[cyan]Executing composite tool...[/cyan]\n")
     console.print("[dim]Using default: modelcontextprotocol/specification[/dim]\n")
 
+    # Note: We don't use a progress bar here because elicitation requires
+    # clean console access for user interaction
+    console.print("[cyan]  → Fetching issues...[/cyan]")
+
     start_time = time.time()
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[cyan]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        console=console
-    ) as progress:
-        task = progress.add_task("Analyzing repository", total=100)
-
-        # Execute tool (uses defaults from config)
-        result = await execute_composite_tool("analyze_repository", {})
-
-        progress.update(task, completed=100)
+    # Execute tool (uses defaults from config)
+    # Elicitation callback will be triggered if > 3 issues are found
+    result = await execute_composite_tool("analyze_repository", {})
 
     duration = time.time() - start_time
 
-    console.print(f"\n[green]✓ Workflow completed in {duration:.2f}s[/green]\n")
+    console.print(f"[green]✓ Workflow completed in {duration:.2f}s[/green]\n")
 
     # Display result
     print_subsection("Repository Health Report")

@@ -7,7 +7,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-THV_BIN="${SCRIPT_DIR}/../../bin/thv"
+THV_BIN=$(command -v thv || echo "${SCRIPT_DIR}/../../bin/thv")
 
 # Colors
 RED='\033[0;31m'

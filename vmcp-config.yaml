@@ -97,7 +97,7 @@ composite_tools:
         source1_preview:
           type: string
           description: "Preview of first source content"
-          value: "{{index .steps.fetch_source_1.output \"text\"}}"
+          value: "{{.steps.fetch_source_1.output.text}}"
         source2_status:
           type: string
           description: "Status of second source fetch"
@@ -105,7 +105,7 @@ composite_tools:
         source2_preview:
           type: string
           description: "Preview of second source content"
-          value: "{{index .steps.fetch_source_2.output \"text\"}}"
+          value: "{{.steps.fetch_source_2.output.text}}"
         source3_status:
           type: string
           description: "Status of third source fetch"
@@ -113,15 +113,16 @@ composite_tools:
         source3_preview:
           type: string
           description: "Preview of third source content"
-          value: "{{index .steps.fetch_source_3.output \"text\"}}"
+          value: "{{.steps.fetch_source_3.output.text}}"
 
   # ==========================================================================
   # Use Case 2: GitHub Repository Health Check
   # ==========================================================================
-  # Demonstrates: Sequential execution with dependencies, parameter defaults
+  # Demonstrates: Conditional elicitation, skippable steps, sequential dependencies
   #
-  # This tool analyzes a GitHub repository by fetching metadata and issue
-  # statistics, with each step depending on the previous one's output.
+  # This tool analyzes a GitHub repository by fetching issues and commits.
+  # If more than 3 issues are found, it prompts the user for confirmation
+  # before continuing with commit analysis (elicitation step).
   - name: "analyze_repository"
     description: "Analyze a GitHub repository's health and activity"
 
@@ -149,10 +150,30 @@ composite_tools:
           repo: "{{.params.repo}}"
           perPage: 5
 
-      # Step 2: List commits (runs in parallel with issues)
+      # Step 2: Elicitation - ask for confirmation if more than 3 issues
+      - id: "confirm_continue"
+        type: "elicitation"
+        depends_on: ["list_issues"]
+        condition: "{{gt (len (fromJson .steps.list_issues.output.text).issues) 3}}"
+        message: "Found more than 3 issues in this repository. Do you want to continue analyzing commits?"
+        schema:
+          type: object
+          properties:
+            continue:
+              type: boolean
+              description: "Continue with commit analysis?"
+          required:
+            - continue
+        onDecline:
+          action: skip_remaining
+        onCancel:
+          action: abort
+
+      # Step 3: List commits (depends on elicitation)
       - id: "list_commits"
         type: "tool"
         tool: "github_list_commits"
+        depends_on: ["confirm_continue"]
         arguments:
           owner: "{{.params.owner}}"
           repo: "{{.params.repo}}"
@@ -176,7 +197,7 @@ composite_tools:
             issues_preview:
               type: string
               description: "Preview of recent issues"
-              value: "{{slice (index .steps.list_issues.output \"text\") 0 200}}"
+              value: "{{slice .steps.list_issues.output.text 0 200}}"
             commits_status:
               type: string
               description: "Status of commits fetch operation"
@@ -188,7 +209,7 @@ composite_tools:
         issues_count:
           type: integer
           description: "Number of issues fetched"
-          value: "5"
+          value: "{{len (index (fromJson .steps.list_issues.output.text) \"issues\")}}"
 
   # ==========================================================================
   # Use Case 3: Container Image Investigation
@@ -248,15 +269,15 @@ composite_tools:
             image_info:
               type: string
               description: "Basic image information"
-              value: "{{slice (index .steps.get_image_info.output \"text\") 0 150}}"
+              value: "{{slice .steps.get_image_info.output.text 0 150}}"
             manifest_preview:
               type: string
               description: "Preview of image manifest"
-              value: "{{slice (index .steps.get_manifest.output \"text\") 0 150}}"
+              value: "{{slice .steps.get_manifest.output.text 0 150}}"
             config_preview:
               type: string
               description: "Preview of image configuration"
-              value: "{{slice (index .steps.get_config.output \"text\") 0 150}}"
+              value: "{{slice .steps.get_config.output.text 0 150}}"
         all_steps_completed:
           type: boolean
           description: "Whether all steps completed successfully"
