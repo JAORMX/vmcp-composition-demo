@@ -432,11 +432,56 @@ async def step_start_server():
     wait_for_user()
 
 
-async def execute_composite_tool(tool_name: str, params: dict) -> dict:
+async def reconnect_mcp_session(reason: str = ""):
+    """Reconnect the MCP session.
+    
+    The streamable HTTP SSE connection (server→client) can go stale during idle periods (e.g. talking a lot during the demo).
+    Elicitation requires this channel, so we must reconnect before demos that use it.
+    """
+    global mcp_session, exit_stack
+    
+    msg = "[cyan]↻ Refreshing MCP connection"
+    if reason:
+        msg += f" ({reason})"
+    msg += "...[/cyan]"
+    console.print(msg)
+    
+    # Close old session gracefully
+    if exit_stack:
+        try:
+            await exit_stack.aclose()
+        except Exception:
+            pass  # Ignore cleanup errors
+    
+    # Create new connection
+    exit_stack = AsyncExitStack()
+    
+    read_stream, write_stream, _ = await exit_stack.enter_async_context(
+        streamablehttp_client(VMCP_ENDPOINT)
+    )
+    
+    mcp_session = await exit_stack.enter_async_context(
+        ClientSession(
+            read_stream, 
+            write_stream,
+            elicitation_callback=elicitation_callback
+        )
+    )
+    
+    await mcp_session.initialize()
+    console.print("[green]✓ MCP connection refreshed[/green]\n")
+
+
+async def execute_composite_tool(tool_name: str, params: dict, retry_on_disconnect: bool = True) -> dict:
     """Execute a composite tool using the MCP SDK and return the result.
     
     Elicitation requests are handled automatically by the elicitation_callback
     registered with the ClientSession.
+    
+    Args:
+        tool_name: Name of the tool to call
+        params: Parameters to pass
+        retry_on_disconnect: If True, reconnect and retry on connection errors
     """
     global mcp_session
 
@@ -456,6 +501,14 @@ async def execute_composite_tool(tool_name: str, params: dict) -> dict:
             "isError": result.isError if hasattr(result, 'isError') else False
         }
     except Exception as e:
+        error_str = str(e).lower()
+        # Check for connection-related errors
+        if retry_on_disconnect and ("disconnect" in error_str or "cancelled" in error_str or "closed" in error_str):
+            console.print(f"[yellow]⚠ Connection lost, reconnecting...[/yellow]")
+            await reconnect_mcp_session()
+            # Retry once after reconnecting
+            return await execute_composite_tool(tool_name, params, retry_on_disconnect=False)
+        
         console.print(f"[red]✗ Tool call failed: {e}[/red]")
         raise
 
@@ -561,6 +614,10 @@ async def step_demo_analyze_repo():
     """Demo 2: GitHub repository health check."""
     console.clear()
     print_section("Demo 2: GitHub Repository Health Check")
+
+    # Reconnect MCP session before this demo to ensure the SSE channel is fresh
+    # The SSE channel (server→client) dies during idle periods and must be restarted
+    await reconnect_mcp_session("elicitation requires fresh SSE channel")
 
     print_subsection("Workflow Overview")
 
